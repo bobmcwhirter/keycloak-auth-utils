@@ -46,6 +46,17 @@ Config.prototype.configure = function(config) {
 
   this.realmUrl      = this.authServerUrl + '/realms/' + this.realm;
   this.realmAdminUrl = this.authServerUrl + '/admin/realms/' + this.realm;
-};
+
+  var plainKey = config['realm-public-key'];
+
+  this.publicKey = "-----BEGIN PUBLIC KEY-----\n";
+
+  for ( i = 0 ; i < plainKey.length ; i = i + 64 ) {
+    this.publicKey += plainKey.substring( i, i + 64 );
+    this.publicKey += "\n";
+  }
+
+  this.publicKey += "-----END PUBLIC KEY-----\n";
+}
 
 module.exports = Config;

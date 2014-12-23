@@ -35,7 +35,7 @@ describe( "grant manager", function() {
       })
       .then( function(grant) {
         expect( grant.access_token ).not.toBe( undefined );
-        expect( grant.access_token ).not.toBe( originalAccessToken );
+        expect( grant.access_token.token ).not.toBe( originalAccessToken.token );
       })
       .done( done );
   })

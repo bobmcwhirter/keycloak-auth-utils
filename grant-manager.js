@@ -18,21 +18,23 @@
 
 var Q = require('q');
 
-var URL = require('url');
-var http = require('http');
+var URL    = require('url');
+var http   = require('http');
+var crypto = require('crypto');
 
 var Form = require('./form');
-
 var Grant = require('./grant');
+var Token = require('./token');
 
 function GrantManager(config) {
-  this.realmUrl = config.realmUrl;
-  this.clientId = config.clientId;
-  this.secret   = config.secret;
+  this.realmUrl  = config.realmUrl;
+  this.clientId  = config.clientId;
+  this.secret    = config.secret;
+  this.publicKey = config.publicKey
+  this.notBefore = 0;
 }
 
 GrantManager.prototype.obtainDirectly = function(username, password, callback) {
-
   var deferred = Q.defer();
 
   var self = this;
@@ -67,10 +69,10 @@ GrantManager.prototype.obtainDirectly = function(username, password, callback) {
     });
     response.on( 'end', function() {
       try {
-        var grant = JSON.parse( json );
-        deferred.resolve( new Grant( grant ) );
+        var data = JSON.parse( json );
+        return deferred.resolve( self.createGrant( data ) );
       } catch (err) {
-        deferred.reject( err );
+        return deferred.reject( err );
       }
     });
   });
@@ -82,9 +84,46 @@ GrantManager.prototype.obtainDirectly = function(username, password, callback) {
 };
 
 
+GrantManager.prototype.obtainFromCode = function(code, sessionId, sessionHost, callback) {
+  var deferred = Q.defer();
+  var self = this;
+
+  var params = 'code=' + code + '&application_session_state=' + sessionId + '&application_session_host=' + sessionHost;
+
+  var options = url.parse( this.realmUrl + '/tokens/access/codes' );
+  options.method = 'POST';
+  options.agent = false;
+  options.headers = {
+    'Content-Length': params.length,
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Authorization': 'Basic ' + new Buffer( this._resource + ':' + this.config.secret ).toString('base64' ),
+  };
+
+  var request = http.request( options, function(response) {
+    var json = '';
+    response.on('data', function(d) {
+      json += d.toString();
+    })
+    response.on( 'end', function() {
+      try {
+        var data = JSON.parse( json );
+        return deferred.resolve( self.createGrant( data ) );
+      } catch (err) {
+        return deferred.reject( err );
+      }
+    })
+  } );
+
+  request.write( params );
+  request.end();
+
+  return deferred.promise.nodeify( callback );
+}
+
+
 GrantManager.prototype.ensureFreshness = function(grant, callback) {
 
-  if ( ! grant.expired() ) {
+  if ( ! grant.isExpired() ) {
     return Q(grant).nodeify( callback );
   }
 
@@ -103,7 +142,7 @@ GrantManager.prototype.ensureFreshness = function(grant, callback) {
 
   var params = new Form( {
     grant_type: 'refresh_token',
-    refresh_token: grant.refresh_token,
+    refresh_token: grant.refresh_token.token,
   });
 
   var request = http.request( opts, function(response) {
@@ -112,9 +151,13 @@ GrantManager.prototype.ensureFreshness = function(grant, callback) {
       json += d.toString();
     });
     response.on( 'end', function() {
-      var data = JSON.parse( json );
-      grant.update( data );
-      deferred.resolve(grant);
+      try {
+        var data = JSON.parse( json );
+        grant.update( self.createGrant( data ) );
+        return deferred.resolve(grant);
+      } catch (err) {
+        return deferred.reject( err );
+      }
     });
 
   });
@@ -124,5 +167,60 @@ GrantManager.prototype.ensureFreshness = function(grant, callback) {
 
   return deferred.promise.nodeify(callback);
 };
+
+GrantManager.prototype.createGrant = function(grantData) {
+
+  var access_token;
+  var refresh_token;
+  var id_token;
+
+  if ( grantData.access_token ) {
+    access_token = new Token( grantData.access_token );
+  }
+
+  if ( grantData.refresh_token ) {
+    refresh_token = new Token( grantData.refresh_token );
+  }
+
+  if ( grantData.id_token ) {
+    id_token = new Token( grantData.id_token );
+  }
+
+  var grant = new Grant( {
+    access_token: access_token,
+    refresh_token: refresh_token,
+    id_token: id_token,
+    expires_in: grantData.expires_in,
+    token_type: grantData.token_type,
+  })
+
+  return this.validateGrant( grant );
+}
+
+GrantManager.prototype.validateGrant = function(grant) {
+  this.access_token  = this.validateToken( grant.access_token );
+  this.refresh_token = this.validateToken( grant.refresh_token );
+  this.id_token      = this.validateToken( grant.id_token );
+
+  return grant;
+}
+
+GrantManager.prototype.validateToken = function(token) {
+  if ( token.isExpired() ) {
+    return;
+  }
+
+  if ( token.content.issuedAt < this.notBefore ) {
+    return;
+  }
+
+  var verify = crypto.createVerify('RSA-SHA256');
+  verify.update( token.signed );
+  if ( ! verify.verify( this.publicKey, token.signature, 'base64' ) ) {
+    return;
+  }
+
+  return token;
+}
 
 module.exports = GrantManager;

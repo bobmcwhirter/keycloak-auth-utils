@@ -15,6 +15,7 @@
  */
 
 var Form = require('./form');
+var Token = require('./token');
 
 var Q = require('q');
 
@@ -33,15 +34,17 @@ Grant.prototype.update = function(grant) {
   // intentional naming with under_scores instead of
   // CamelCase to match both Keycloak's grant JSON
   // and to allow new Grant(new Grant(kc)) copy-ctor
+
   this.access_token  = grant.access_token;
   this.refresh_token = grant.refresh_token;
   this.id_token      = grant.id_token;
+
   this.token_type    = grant.token_type;
   this.expires_in    = grant.expires_in;
 };
 
-Grant.prototype.expired = function() {
-  return true;
-};
+Grant.prototype.isExpired = function() {
+  return this.access_token.isExpired();
+}
 
 module.exports = Grant;
