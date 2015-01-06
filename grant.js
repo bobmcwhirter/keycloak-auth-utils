@@ -26,10 +26,6 @@ function Grant(grant) {
   this.update( grant );
 }
 
-Grant.prototype.dump = function(token) {
-  console.log( JSON.parse( new Buffer( token.split('.')[1], 'base64' ) ) );
-};
-
 Grant.prototype.update = function(grant) {
   // intentional naming with under_scores instead of
   // CamelCase to match both Keycloak's grant JSON
@@ -43,7 +39,14 @@ Grant.prototype.update = function(grant) {
   this.expires_in    = grant.expires_in;
 };
 
+Grant.prototype.toString = function() {
+  return this.__raw;
+}
+
 Grant.prototype.isExpired = function() {
+  if ( ! this.access_token ) {
+    return true;
+  }
   return this.access_token.isExpired();
 }
 

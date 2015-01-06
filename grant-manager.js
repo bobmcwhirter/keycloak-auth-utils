@@ -90,13 +90,13 @@ GrantManager.prototype.obtainFromCode = function(code, sessionId, sessionHost, c
 
   var params = 'code=' + code + '&application_session_state=' + sessionId + '&application_session_host=' + sessionHost;
 
-  var options = url.parse( this.realmUrl + '/tokens/access/codes' );
+  var options = URL.parse( this.realmUrl + '/tokens/access/codes' );
   options.method = 'POST';
   options.agent = false;
   options.headers = {
     'Content-Length': params.length,
     'Content-Type': 'application/x-www-form-urlencoded',
-    'Authorization': 'Basic ' + new Buffer( this._resource + ':' + this.config.secret ).toString('base64' ),
+    'Authorization': 'Basic ' + new Buffer( this.clientId + ':' + this.secret ).toString('base64' ),
   };
 
   var request = http.request( options, function(response) {
@@ -106,8 +106,8 @@ GrantManager.prototype.obtainFromCode = function(code, sessionId, sessionHost, c
     })
     response.on( 'end', function() {
       try {
-        var data = JSON.parse( json );
-        return deferred.resolve( self.createGrant( data ) );
+        //var data = JSON.parse( json );
+        return deferred.resolve( self.createGrant( json ) );
       } catch (err) {
         return deferred.reject( err );
       }
@@ -152,8 +152,8 @@ GrantManager.prototype.ensureFreshness = function(grant, callback) {
     });
     response.on( 'end', function() {
       try {
-        var data = JSON.parse( json );
-        grant.update( self.createGrant( data ) );
+        //var data = JSON.parse( json );
+        grant.update( self.createGrant( json ) );
         return deferred.resolve(grant);
       } catch (err) {
         return deferred.reject( err );
@@ -168,14 +168,16 @@ GrantManager.prototype.ensureFreshness = function(grant, callback) {
   return deferred.promise.nodeify(callback);
 };
 
-GrantManager.prototype.createGrant = function(grantData) {
+GrantManager.prototype.createGrant = function(rawData) {
+
+  var grantData = JSON.parse( rawData );
 
   var access_token;
   var refresh_token;
   var id_token;
 
   if ( grantData.access_token ) {
-    access_token = new Token( grantData.access_token );
+    access_token = new Token( grantData.access_token, this.clientId );
   }
 
   if ( grantData.refresh_token ) {
@@ -194,18 +196,24 @@ GrantManager.prototype.createGrant = function(grantData) {
     token_type: grantData.token_type,
   })
 
+  grant.__raw = rawData;
+
   return this.validateGrant( grant );
 }
 
 GrantManager.prototype.validateGrant = function(grant) {
-  this.access_token  = this.validateToken( grant.access_token );
-  this.refresh_token = this.validateToken( grant.refresh_token );
-  this.id_token      = this.validateToken( grant.id_token );
+  grant.access_token  = this.validateToken( grant.access_token );
+  grant.refresh_token = this.validateToken( grant.refresh_token );
+  grant.id_token      = this.validateToken( grant.id_token );
 
   return grant;
 }
 
 GrantManager.prototype.validateToken = function(token) {
+  if ( ! token ) {
+    return;
+  }
+
   if ( token.isExpired() ) {
     return;
   }
