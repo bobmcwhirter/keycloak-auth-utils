@@ -17,3 +17,8 @@ Embodies `access_token`, `refresh_token` and other handiness.
 
 Embodies JSON Web Token bits and checking for roles.
 
+# Resources
+
+* [GitHub](http://github.com/bobmcwhirter/keycloak-auth-utils)
+* [Documentation](http://bobmcwhirter.github.io/keycloak-auth-utils)
+
