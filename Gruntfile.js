@@ -13,12 +13,16 @@ module.exports = function(grunt) {
         }
       }
     },
+    touch: {
+      src: [ 'doc/.nojekyll' ]
+    },
     jshint: {
       all: ['Gruntfile.js', '*.js', 'test/**/*.js']
     },
     'gh-pages': {
       options: {
-        base: 'doc'
+        base: 'doc',
+        dotfiles: true,
       },
       src: ['**']
     }
@@ -27,9 +31,10 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-doxx');
   grunt.loadNpmTasks('grunt-gh-pages');
+  grunt.loadNpmTasks('grunt-touch');
 
   // Default task(s).
-  grunt.registerTask('default', ['jshint', 'doxx']);
+  grunt.registerTask('default', ['jshint', 'doxx', 'touch']);
 
 };
 

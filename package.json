@@ -17,6 +17,7 @@
     "grunt-docco": "^0.3.3",
     "grunt-doxx": "^0.1.2",
     "grunt-gh-pages": "^0.9.1",
+    "grunt-touch": "^0.1.0",
     "jasmine": "^2.1.1"
   },
   "dependencies": {
