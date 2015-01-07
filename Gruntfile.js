@@ -15,7 +15,7 @@ module.exports = function(grunt) {
     },
     jshint: {
       all: ['Gruntfile.js', '*.js', 'test/**/*.js']
-    }
+    },
     'gh-pages': {
       options: {
         base: 'doc'
