@@ -4,12 +4,12 @@ module.exports = function(grunt) {
   // Project configuration.
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
-    docco: {
-      debug: {
-        src: ['index.js', 'token-refresher.js', 'grant.js'],
+    doxx: {
+      all: {
+        src: '.',
+        target: 'doc',
         options: {
-          output: 'doc/',
-          layout: 'classic'
+          ignore: 'Gruntfile.js,form.js,spec,node_modules,.git',
         }
       }
     },
@@ -19,10 +19,10 @@ module.exports = function(grunt) {
   });
 
   grunt.loadNpmTasks('grunt-contrib-jshint');
-  grunt.loadNpmTasks('grunt-docco');
+  grunt.loadNpmTasks('grunt-doxx');
 
   // Default task(s).
-  grunt.registerTask('default', ['jshint', 'docco']);
+  grunt.registerTask('default', ['jshint', 'doxx']);
 
 };
 

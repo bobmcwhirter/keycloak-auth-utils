@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright 2014 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,11 @@
  */
 
 
-
+/** Export all useful things.
+ */
 module.exports = {
   Config:       require('./config'),
   GrantManager: require('./grant-manager'),
   Grant:        require('./grant' ),
-  Form:         require('./form'),
 };
 
