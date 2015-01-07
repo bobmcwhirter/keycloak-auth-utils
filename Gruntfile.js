@@ -16,10 +16,17 @@ module.exports = function(grunt) {
     jshint: {
       all: ['Gruntfile.js', '*.js', 'test/**/*.js']
     }
+    'gh-pages': {
+      options: {
+        base: 'doc'
+      },
+      src: ['**']
+    }
   });
 
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-doxx');
+  grunt.loadNpmTasks('grunt-gh-pages');
 
   // Default task(s).
   grunt.registerTask('default', ['jshint', 'doxx']);
