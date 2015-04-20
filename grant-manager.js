@@ -20,6 +20,7 @@ var Q = require('q');
 
 var URL    = require('url');
 var http   = require('http');
+var https   = require('https');
 var crypto = require('crypto');
 
 var Form = require('./form');
@@ -122,15 +123,21 @@ GrantManager.prototype.obtainDirectly = function(username, password, callback) {
  * @param {String} sessionHost Optional session host for targetted Keycloak console post-backs.
  * @param {Function} callback Optional callback, if not using promises.
  */
-GrantManager.prototype.obtainFromCode = function(code, sessionId, sessionHost, callback) {
+GrantManager.prototype.obtainFromCode = function(request, code, sessionId, sessionHost, callback) {
   var deferred = Q.defer();
   var self = this;
 
-  var params = 'code=' + code + '&application_session_state=' + sessionId + '&application_session_host=' + sessionHost;
+  var redirectUri = encodeURIComponent( request.session.auth_redirect_uri );
+
+  var params = 'code=' + code + '&application_session_state=' + sessionId + '&redirect_uri=' + redirectUri + '&application_session_host=' + sessionHost;
 
   var options = URL.parse( this.realmUrl + '/tokens/access/codes' );
   options.method = 'POST';
-  options.agent = false;
+  if ( options.protocol == 'https:' ) {
+    options.agent = new https.Agent();
+  } else {
+    options.agent = new http.Agent();
+  }
   options.headers = {
     'Content-Length': params.length,
     'Content-Type': 'application/x-www-form-urlencoded',
@@ -144,7 +151,8 @@ GrantManager.prototype.obtainFromCode = function(code, sessionId, sessionHost, c
     });
     response.on( 'end', function() {
       try {
-        return deferred.resolve( self.createGrant( json ) );
+        var grant = self.createGrant( json );
+        return deferred.resolve( grant );
       } catch (err) {
         return deferred.reject( err );
       }
@@ -176,7 +184,6 @@ GrantManager.prototype.obtainFromCode = function(code, sessionId, sessionHost, c
  * @param {Function} callback Optional callback if promises are not used.
  */
 GrantManager.prototype.ensureFreshness = function(grant, callback) {
-
   if ( ! grant.isExpired() ) {
     return Q(grant).nodeify( callback );
   }
@@ -195,6 +202,12 @@ GrantManager.prototype.ensureFreshness = function(grant, callback) {
   opts.headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
   };
+
+  if ( options.protocol == 'https:' ) {
+    options.agent = new https.Agent();
+  } else {
+    options.agent = new http.Agent();
+  }
 
   opts.headers['Authorization'] = 'Basic ' + new Buffer( this.clientId + ':' + this.secret ).toString( 'base64' );
 
