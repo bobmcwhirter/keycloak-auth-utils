@@ -1,6 +1,6 @@
 {
   "name": "keycloak-auth-utils",
-  "version": "0.0.7",
+  "version": "0.0.14",
   "description": "General Keycloak Utilities",
   "main": "index.js",
   "scripts": {
