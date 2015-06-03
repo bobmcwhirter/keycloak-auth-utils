@@ -21,5 +21,6 @@ module.exports = {
   Config:       require('./config'),
   GrantManager: require('./grant-manager'),
   Grant:        require('./grant' ),
+  Token: 		require('./token')
 };
 
